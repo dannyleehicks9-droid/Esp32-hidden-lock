@@ -1,0 +1,34 @@
+// Define the GPIO pin connected to the MOSFET gate
+const int lockPin = 23; 
+
+void setup() {
+  // Initialize the lock pin as an output
+  pinMode(lockPin, OUTPUT);
+  
+  // Ensure the lock starts in a SECURE/LOCKED state (Low)
+  digitalWrite(lockPin, LOW);
+  
+  Serial.begin(115200);
+  Serial.println("Hidden Electronic Lock System Initialized.");
+}
+
+void loop() {
+  // Simulating an unlock trigger event every 15 seconds for testing
+  delay(15000); 
+  
+  triggerUnlock();
+}
+
+void triggerUnlock() {
+  Serial.println("Access Granted! Unlocking door...");
+  
+  // Set pin HIGH to turn on MOSFET and power the 12V solenoid
+  digitalWrite(lockPin, HIGH); 
+  
+  // Keep the door unlatched for 3 seconds to let someone enter
+  delay(3000); 
+  
+  // Set pin LOW to drop power to solenoid, safely locking the door frame
+  digitalWrite(lockPin, LOW); 
+  Serial.println("Door Locked.");
+}
