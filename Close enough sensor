@@ -1,0 +1,66 @@
+#include <BLEDevice.h>
+#include <BLEUtils.h>
+#include <BLEScan.h>
+#include <BLEAdvertisedDevice.h>
+
+const int lockPin = 23; 
+const int scanTime = 2; // How long to scan in seconds per cycle
+
+// Target device identifier (lowercase, colon-separated format)
+const String targetDeviceAddress = "xx:xx:xx:xx:xx:xx"; 
+
+// Signal strength cutoff (Adjust this! -65 is close, -90 is far away)
+const int rssiThreshold = -68; 
+
+BLEScan* pBLEScan;
+bool deviceFoundNear = false;
+
+class MyAdvertisedDeviceCallbacks: public BLEAdvertisedDeviceCallbacks {
+    void onResult(BLEAdvertisedDevice advertisedDevice) {
+        String foundAddress = advertisedDevice.getAddress().toString().c_str();
+        
+        if (foundAddress == targetDeviceAddress) {
+            int rssi = advertisedDevice.getRSSI();
+            Serial.print("Target Found! RSSI Signal Strength: ");
+            Serial.println(rssi);
+            
+            // If the signal is strong enough, consider the user "close"
+            if (rssi >= rssiThreshold) {
+                deviceFoundNear = true;
+            }
+        }
+    }
+};
+
+void setup() {
+  pinMode(lockPin, OUTPUT);
+  digitalWrite(lockPin, LOW); // Start locked
+  
+  Serial.begin(115200);
+  Serial.println("Initializing BLE Proximity Scanner...");
+
+  BLEDevice::init("");
+  pBLEScan = BLEDevice::getScan(); 
+  pBLEScan->setAdvertisedDeviceCallbacks(new MyAdvertisedDeviceCallbacks());
+  pBLEScan->setActiveScan(true); 
+  pBLEScan->setInterval(100);
+  pBLEScan->setWindow(99);  
+}
+
+void loop() {
+  deviceFoundNear = false; // Reset status before scan
+  Serial.println("Scanning for keyless entry beacon...");
+  
+  // Scan for nearby Bluetooth signals
+  BLEScanResults* foundDevices = pBLEScan->start(scanTime, false);
+  pBLEScan->clearResults();   // Delete results from memory to prevent crashes
+
+  if (deviceFoundNear) {
+      Serial.println("Access Granted: Owner detected nearby. Unlocking!");
+      digitalWrite(lockPin, HIGH); // Unlock
+      delay(5000);                 // Keep open for 5 seconds
+      digitalWrite(lockPin, LOW);  // Re-lock
+      Serial.println("Door Secure. Cooldown active...");
+      delay(5000);                 // Cooldown to prevent immediate looping re-trigger
+  }
+}
